@@ -2,7 +2,7 @@
 
 > **“青简传古韵，墨缘写诗心”**
 >
-> 一个优雅、现代化的古诗文默写与练习平台。
+> 一个优雅、现代化的古诗文背诵默写与练习平台。
 
 ![Version](https://img.shields.io/badge/version-1.7.0-blue)  ![License](https://img.shields.io/badge/license-MIT-green)  ![PWA](https://img.shields.io/badge/PWA-Supported-orange) ![Powered](https://img.shields.io/badge/Powered_by-AI-red)
 
