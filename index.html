@@ -6321,7 +6321,6 @@
 
         // 点击开始默写
         startBtn.addEventListener('click', () => {
-            setTimeout(checkDeviceType, 100); 
             originalText = textSource.value.trim();
             if (originalText === '') {
                 showToast('请输入或上传需要默写的文本！'); 
