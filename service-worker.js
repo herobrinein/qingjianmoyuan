@@ -24,7 +24,7 @@ const APP_SHELL = [
 
 // 重要配置 - 默认值
 const DEFAULT_MP3_CACHE_COUNT = 30;
-const REQUIRED_FILES = ['./data.json', './music.json', 'changelog.txt']; // 必须始终缓存的文件
+const REQUIRED_FILES = ['./data.json', './music.json', './changelog.txt']; // 必须始终缓存的文件
 
 // 缓存配置管理
 const CACHE_CONFIG_KEY = 'qjmy-cache-config';
