@@ -446,23 +446,30 @@ async function handleDataJson(request) {
       return networkResponse;
     }
     
-    // 3. 网络请求返回 404/500 等错误：尝试读取缓存
     throw new Error('Network response was not ok');
     
   } catch (error) {
     console.warn('SW: 网络请求失败，尝试读取缓存:', error);
     
-    // 4. 读取缓存
+    // 4. 读取缓存 (关键修改：增加 ignoreSearch: true 忽略 ?t= 时间戳)
     const dataCache = await caches.open(DATA_CACHE);
-    const cachedResponse = await dataCache.match(request);
+    let cachedResponse = await dataCache.match(request, { ignoreSearch: true });
     
     if (cachedResponse) {
       return cachedResponse;
     }
+
+    // 关键修改：如果 data-cache 里没有，尝试去 app-shell-cache 里找
+    // 因为 music.json 在 install 阶段被放进了 APP_SHELL_CACHE
+    const appShellCache = await caches.open(APP_SHELL_CACHE);
+    cachedResponse = await appShellCache.match(request, { ignoreSearch: true });
+
+    if (cachedResponse) {
+        console.log('SW: 从 AppShell 缓存中找到备用数据');
+        return cachedResponse;
+    }
     
-    // 5. 既没网络也没缓存：返回错误，让页面处理
-    // 不要返回 503 JSON，直接抛出或者返回 null 让页面 fetch 报错
-    // 这样页面的 .catch 就能捕获到，而不是拿到一个包含 error 字段的 JSON
+    // 5. 既没网络也没缓存
     throw error;
   }
 }
@@ -570,16 +577,15 @@ async function updateMp3InBackground(request, cache) {
 
 // 静态资源处理
 async function handleStaticResources(request) {
-  const url = new URL(request.url);
-  
   // 优先从应用壳缓存获取
   const appShellCache = await caches.open(APP_SHELL_CACHE);
-  const cachedResponse = await appShellCache.match(request);
+  // 关键修改：添加 { ignoreSearch: true } 以忽略 url 中的 query 参数(如 ?t=...)
+  const cachedResponse = await appShellCache.match(request, { ignoreSearch: true });
   if (cachedResponse) return cachedResponse;
   
   // 尝试从数据缓存获取
   const dataCache = await caches.open(DATA_CACHE);
-  const dataCachedResponse = await dataCache.match(request);
+  const dataCachedResponse = await dataCache.match(request, { ignoreSearch: true });
   if (dataCachedResponse) return dataCachedResponse;
   
   // 最后尝试网络
