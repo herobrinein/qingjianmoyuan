@@ -321,6 +321,9 @@
             position: relative;
             width: 50px;
             height: 50px;
+			flex-shrink: 0;
+            min-width: 50px;
+            min-height: 50px;
             border-radius: 50%;
             background-color: var(--container-bg);
             border: 2px solid var(--border-color);
@@ -982,20 +985,21 @@
             color: #555;
         }
 		
-            .floating-controls {
-                position: fixed;
-                top: calc(10px + env(safe-area-inset-top)); 
-                right: calc(10px + env(safe-area-inset-right));
-                display: flex;
-                gap: 12px;
-                background-color: var(--container-bg);
-                border: 2px solid var(--border-color);
-                border-radius: 30px;
-                padding: 8px;
-                box-shadow: 0 4px 15px var(--shadow-color);
-                z-index: 1001;
-                transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
-            }
+        .floating-controls {
+            position: fixed;
+            top: calc(10px + env(safe-area-inset-top)); 
+            right: calc(10px + env(safe-area-inset-right));
+            display: flex;
+            gap: 12px;
+			align-items: center;
+            background-color: var(--container-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 30px;
+            padding: 8px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            z-index: 1001;
+            transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+        }
         
         .floating-controls:hover {
             box-shadow: 0 6px 20px var(--shadow-color);
@@ -1065,6 +1069,9 @@
         .settings-toggle {
             width: 50px;
             height: 50px;
+			flex-shrink: 0;
+            min-width: 50px;
+            min-height: 50px; 
             border-radius: 50%;
             background-color: var(--container-bg);
             border: 2px solid var(--border-color);
@@ -2394,6 +2401,9 @@
             position: relative;
             width: 50px;
             height: 50px;
+			flex-shrink: 0;
+            min-width: 50px;
+            min-height: 50px;
             border-radius: 50%;
             background-color: var(--container-bg);
             border: 2px solid var(--border-color);
@@ -3151,13 +3161,6 @@
                 min-height: 30px; /* 新增 */
                 flex-shrink: 0;
             }
-			
-			.floating-controls {
-                top: calc(10px + env(safe-area-inset-top));
-                right: calc(10px + env(safe-area-inset-right));
-                gap: 8px;
-                padding: 6px;
-            }
             
             .settings-toggle,
             .theme-toggle {
@@ -3393,11 +3396,15 @@
             }
 	        
             /* 确保圆形按钮保持圆形 */
-            .settings-toggle, .theme-toggle, .music-btn, .settings-close {
+            .settings-toggle, .theme-toggle, .about-toggle, .music-btn, .settings-close {
                 border-radius: 50% !important;
                 width: 44px !important;
                 height: 44px !important;
                 min-height: 44px !important;
+                font-size: 1.3em;
+				flex-shrink: 0; 
+                min-width: 44px;
+                min-height: 44px;
             }
 	        
             /* 设置面板关闭按钮保持圆形 */
@@ -3415,12 +3422,6 @@
                 padding: 6px;
                 border-radius: 30px;
                 flex-direction: row;
-            }
-	        
-            .settings-toggle, .theme-toggle {
-                width: 44px;
-                height: 44px;
-                font-size: 1.3em;
             }
 			
 			button, .btn {
@@ -3489,12 +3490,6 @@
                 width: 100%;
             }
 			
-            .about-toggle {
-                width: 44px;
-                height: 44px;
-                font-size: 1.3em;
-            }
-            
             .about-modal-box {
                 width: 95%;
                 max-height: 85vh;
@@ -4463,6 +4458,14 @@
                 line-height: 30px !important; 
             }
             
+            /* --- 终极修复：iPhone X 横屏按钮变形完美解决方案 --- */
+            .floating-controls .settings-toggle,
+            .floating-controls .theme-toggle,
+            .floating-controls .about-toggle {
+                /* 6. 外观修饰 */
+                font-size: 1.3em !important;
+            }
+			
             .select-selected:after { 
                 width: 6px; height: 6px; margin-left: auto; 
             }
