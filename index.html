@@ -5538,7 +5538,28 @@
             if (mp3CountEl) mp3CountEl.textContent = mp3Files;
             
             // 更新时间
-            if (lastUpdatedEl) lastUpdatedEl.textContent = '刚刚';
+            const updateTimeText = () => {
+                if (!lastUpdateTime || !lastUpdatedEl) return;
+                const now = new Date();
+                const diff = Math.floor((now - lastUpdateTime) / 1000); // 算出相差秒数
+                
+                let text = '刚刚';
+                if (diff >= 60 && diff < 3600) {
+                    text = Math.floor(diff / 60) + ' 分钟前';
+                } else if (diff >= 3600) {
+                    text = Math.floor(diff / 3600) + ' 小时前';
+                }
+                lastUpdatedEl.textContent = text;
+            };
+
+            // 立即执行一次
+            updateTimeText();
+
+            // 清除旧的计时器（防止重复创建）
+            if (window.cacheTimer) clearInterval(window.cacheTimer);
+            
+            // 启动新计时器，每分钟更新一次文字
+            window.cacheTimer = setInterval(updateTimeText, 60000);
             
             // 更新详情
             if (status.details) {
@@ -5796,21 +5817,13 @@
                 }
             });
         }
-		
-		// --- 新增：定义当前版本和年份配置 ---
-        const APP_CONFIG = {
-            version: "v1.7.2", // 你可以在这里手动修改版本号
-            updateYear: "2025-12-27" // 修改年份
-        };
 
         // --- 新增：加载更新日志的函数 ---
         function loadChangelog() {
-            // 设置版本号和年份显示
-            document.getElementById('app-version').textContent = APP_CONFIG.version;
-            document.getElementById('app-year').textContent = APP_CONFIG.updateYear;
-
             const changelogContainer = document.getElementById('changelog-container');
-            
+            const versionEl = document.getElementById('app-version');
+            const dateEl = document.getElementById('app-year');
+
             // 添加防缓存的时间戳
             fetch('changelog.txt?t=' + new Date().getTime())
                 .then(response => {
@@ -5824,11 +5837,34 @@
                         changelogContainer.textContent = "暂无更新日志内容。";
                         return;
                     }
+
+                    // 1. 显示日志内容
                     changelogContainer.textContent = text;
+
+                    // 2. 解析第一行获取版本和日期
+                    // 假设格式为: [2025-12-27] v1.7.2
+                    const lines = text.trim().split('\n'); // 按行分割
+                    if (lines.length > 0) {
+                        const firstLine = lines[0].trim();
+                        // 正则表达式匹配：[日期] 空格 版本号
+                        const match = firstLine.match(/^\[(\d{4}-\d{2}-\d{2})\]\s+(v[\d\.]+)$/);
+                        
+                        if (match) {
+                            const date = match[1];    // 获取日期 (例如 2025-12-27)
+                            const version = match[2]; // 获取版本 (例如 v1.7.2)
+                            
+                            // 更新 DOM
+                            versionEl.textContent = version;
+                            dateEl.textContent = date;
+                        } else {
+                            console.warn('changelog.txt 第一行格式不匹配，无法自动提取版本号');
+                        }
+                    }
                 })
                 .catch(error => {
                     console.warn('获取更新日志失败:', error);
                     changelogContainer.innerHTML = '<span style="color:var(--incorrect-color)">无法加载 changelog.txt 文件。<br>请确保该文件存在于同级目录下。</span>';
+                    // 如果加载失败，可以使用默认值或保留 HTML 中的初始值
                 });
         }
 
@@ -6810,8 +6846,12 @@
                     selectedDiv.classList.remove("select-arrow-active");
                     
                     // 核心：触发之前的计算逻辑
-                    if (window.isAutoTimeCalc && timedModeToggle.checked) {
-                        calculateAndSetTime();
+                    if (window.isAutoTimeCalc && document.getElementById('timed-mode-toggle').checked) {
+                        if (typeof window.calculateAndSetTime === 'function') {
+                            window.calculateAndSetTime();
+                        } else if (typeof calculateAndSetTime === 'function') {
+                            calculateAndSetTime();
+                        }
                     }
                 });
             });
@@ -8178,7 +8218,12 @@
             }
 
             // 辅助函数：根据字数和难度计算时间
-            function calculateAndSetTime() {
+            window.calculateAndSetTime = function() {
+                const textSource = document.getElementById('text-source'); // 确保能获取到元素
+                const timeLimitInput = document.getElementById('time-limit-input');
+                
+                if (!textSource) return;
+
                 const textVal = textSource.value.trim(); // 获取文本
                 const length = textVal.length;
                 
