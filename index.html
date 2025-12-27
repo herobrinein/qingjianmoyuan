@@ -6711,7 +6711,7 @@
             // ... (后续统计和滚动逻辑保持不变) ...
             if (updateStats) {
                 typedCount.textContent = totalInputLength;
-                const accuracyValue = totalInputLength > 0 ? Math.round((currentCorrectCount / totalInputLength) * 100) : 100;
+                const accuracyValue = totalInputLength > 0 ? Math.floor((currentCorrectCount / totalInputLength) * 100) : 100;
                 accuracy.textContent = `${accuracyValue}%`;
                 const progressPercent = Math.min(Math.round((Math.min(totalInputLength, originalText.length) / originalText.length) * 100), 100);
                 progressFill.style.width = `${progressPercent}%`;
@@ -6940,9 +6940,9 @@
             // --- 修复1：评估正确率使用新算法 ---
             let evaluationAccuracy;
             if (typedText.length <= originalText.length) {
-                evaluationAccuracy = Math.round((correctCount / originalText.length) * 100);
+                evaluationAccuracy = Math.floor((correctCount / originalText.length) * 100);
             } else {
-                evaluationAccuracy = Math.round((correctCount / typedText.length) * 100);
+                evaluationAccuracy = Math.floor((correctCount / typedText.length) * 100);
             }
             
             // --- 修复2：获取实际用时 ---

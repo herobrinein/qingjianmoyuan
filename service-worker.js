@@ -9,22 +9,34 @@ const APP_SHELL = [
   './test.html',
   './favicon.svg',
   './manifest.json',
-  './music.json',
   './changelog.txt',
   './icons/icon-192.png',
   './icons/icon-512.png',
   
-  // 添加关键图片资源
+  // 静态图片资源（缓存优先）
   './image/deepseek.png',
   './image/gemini.png',
   './image/grok.png',
   './image/caoxingyu.png',
   './image/hero.gif',
+  
+  // 第三方库（缓存优先）
+  './js/lib/jquery.min.js',
+  './js/lib/jquery.qrcode.min.js',
+  './js/lib/semantic.min.js',
+  './js/lib/semantic.min.css',
+  './js/lib/moment.min.js'
 ];
 
-// 重要配置 - 默认值
-const DEFAULT_MP3_CACHE_COUNT = 30;
-const REQUIRED_FILES = ['./data.json', './music.json', './changelog.txt']; // 必须始终缓存的文件
+// 必须始终缓存的文件（关键数据文件）
+const REQUIRED_FILES = ['./data.json', './music.json', './changelog.txt'];
+
+// 静态资源扩展名（缓存优先）
+const STATIC_EXTENSIONS = [
+  '.png', '.jpg', '.jpeg', '.gif', '.svg', // 图片
+  '.css', '.js', '.woff', '.woff2', '.ttf', '.eot', // 样式和字体
+  '.ico', '.webp', '.avif' // 其他静态文件
+];
 
 // 缓存配置管理
 const CACHE_CONFIG_KEY = 'qjmy-cache-config';
@@ -197,7 +209,13 @@ function getPathName(request) {
   return url.pathname;
 }
 
-// 安装阶段：缓存应用壳和data.json（必须缓存）
+// 检查URL是否为静态资源
+function isStaticResource(url) {
+  const urlStr = url.toString().toLowerCase();
+  return STATIC_EXTENSIONS.some(ext => urlStr.endsWith(ext));
+}
+
+// 安装阶段：缓存应用壳和关键文件
 self.addEventListener('install', (event) => {
   self.skipWaiting(); // 强制立即接管，不要等待
   
@@ -209,7 +227,7 @@ self.addEventListener('install', (event) => {
       await initIndexedDB();
       await fetchCacheConfigFromPage();
       
-      // 只缓存轻量级的 App Shell
+      // 只缓存轻量级的 App Shell（不包括 music.json，因为它需要网络优先）
       const appShellCache = await caches.open(APP_SHELL_CACHE);
       console.log('SW: 正在预缓存核心应用壳...');
       
@@ -221,8 +239,8 @@ self.addEventListener('install', (event) => {
         )
       );
       
-      // 注意：这里不再强制缓存 data.json，让它在主页面加载时自动缓存
-      console.log('SW: 核心安装完成 (data.json 将在首次加载时缓存)');
+      // 注意：data.json 和 music.json 不在安装阶段缓存，而是在首次请求时缓存
+      console.log('SW: 核心安装完成 (关键数据文件将在首次加载时缓存)');
     })()
   );
 });
@@ -254,13 +272,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 缓存清理函数 - 确保data.json始终保留
+// 缓存清理函数 - 确保关键数据文件始终保留
 async function cleanupCache() {
   try {
     const dataCache = await caches.open(DATA_CACHE);
     const requests = await dataCache.keys();
     
-    // 分离必须保留的文件和普通MP3文件
+    // 分离必须保留的文件和普通文件
     const requiredUrls = REQUIRED_FILES.map(path => new URL(path, self.location.origin).href);
     const mp3Files = [];
     const otherFiles = [];
@@ -268,8 +286,13 @@ async function cleanupCache() {
     for (const request of requests) {
       const url = request.url;
       
-      if (requiredUrls.some(requiredUrl => url.endsWith(requiredUrl))) {
-        // 必须保留的文件（如data.json） - 跳过不处理
+      // 检查是否为必须保留的文件
+      const isRequired = requiredUrls.some(requiredUrl => 
+        url.includes(requiredUrl.split('/').pop()) // 检查文件名
+      );
+      
+      if (isRequired) {
+        // 必须保留的文件 - 跳过不处理
         continue;
       } else if (url.endsWith('.mp3')) {
         mp3Files.push({ request, url });
@@ -305,9 +328,10 @@ async function cleanupCache() {
     // 清理后的统计
     const remainingRequests = await dataCache.keys();
     const remainingMp3 = remainingRequests.filter(req => req.url.endsWith('.mp3')).length;
-    const remainingRequired = remainingRequests.filter(req => 
-      requiredUrls.some(requiredUrl => req.url.endsWith(requiredUrl))
-    ).length;
+    const remainingRequired = remainingRequests.filter(req => {
+      const url = req.url;
+      return requiredUrls.some(requiredUrl => url.includes(requiredUrl.split('/').pop()));
+    }).length;
     
     console.log(`SW: 清理后 - 总文件: ${remainingRequests.length}, MP3: ${remainingMp3}, 必须文件: ${remainingRequired}`);
     
@@ -323,42 +347,49 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   const request = event.request;
   
-  // 策略A：导航请求（页面访问）
+  // 策略A：导航请求（页面访问）- 后台更新策略
   if (request.mode === 'navigate') {
     event.respondWith(handleNavigation(request));
     return;
   }
   
-  // 策略B：data.json - 特殊处理，确保始终可访问
-  if (url.pathname.endsWith('data.json') || url.pathname.endsWith('music.json')) {
-    event.respondWith(handleDataJson(request));
+  // 策略B：关键数据文件 - 网络优先策略
+  if (url.pathname.endsWith('data.json') || 
+      url.pathname.endsWith('music.json') || 
+      url.pathname.endsWith('changelog.txt')) {
+    event.respondWith(handleCriticalData(request));
     return;
   }
   
-  // 策略C：MP3文件 - 缓存但有限制
+  // 策略C：MP3文件 - 缓存优先策略（受配置控制）
   if (url.pathname.endsWith('.mp3')) {
     event.respondWith(handleMp3(request));
     return;
   }
   
-  // 策略D：其他静态资源
-  event.respondWith(handleStaticResources(request));
+  // 策略D：静态资源（图片、CSS、JS、字体等）- 缓存优先策略
+  if (isStaticResource(url)) {
+    event.respondWith(handleStaticResources(request));
+    return;
+  }
+  
+  // 策略E：其他资源 - 后台更新策略
+  event.respondWith(handleOtherResources(request));
 });
 
-// 导航处理 - FIXED: 根据实际请求的路径返回对应的页面
+// ================= 策略实现 =================
+
+// 1. 导航处理 - 后台更新策略（先缓存后网络更新）
 async function handleNavigation(request) {
   const pathname = getPathName(request);
   
-  // 1. 动态确定目标页面路径
+  // 动态确定目标页面路径
   let targetPage;
   
-  // 处理根路径映射 (通常映射到 index.html 或 index.html)
+  // 处理根路径映射
   if (pathname === '/' || pathname.endsWith('/index.html')) {
     targetPage = './index.html';
   } else {
-    // 关键修改：对于其他所有 HTML 文件，直接根据路径生成缓存键
-    // 例如: /about.html -> ./about.html
-    // 例如: /new-page.html -> ./new-page.html
     targetPage = `.${pathname}`;
   }
   
@@ -370,7 +401,7 @@ async function handleNavigation(request) {
     
     if (cachedResponse) {
       // 命中缓存：返回缓存并后台更新
-      updatePageInBackground(request, targetPage);
+      updateInBackground(request, targetPage, APP_SHELL_CACHE);
       return cachedResponse;
     }
     
@@ -389,7 +420,7 @@ async function handleNavigation(request) {
     // 离线且无该页面缓存时的兜底策略
     try {
       const appShellCache = await caches.open(APP_SHELL_CACHE);
-      // 如果访问新页面失败，回退到主页，或者你可以做一个专门的 ./offline.html
+      // 如果访问新页面失败，回退到主页
       const fallbackPage = await appShellCache.match('./index.html');
       if (fallbackPage) {
         return fallbackPage;
@@ -406,34 +437,10 @@ async function handleNavigation(request) {
   }
 }
 
-// 后台更新页面 - FIXED: 根据路径更新对应的页面
-async function updatePageInBackground(request, targetPage) {
+// 2. 关键数据文件处理 - 网络优先策略
+async function handleCriticalData(request) {
   try {
-    // 如果没有传入 targetPage (兼容旧代码)，则重新计算
-    if (!targetPage) {
-       const pathname = getPathName(request);
-       if (pathname === '/' || pathname.endsWith('/index.html')) {
-         targetPage = './index.html';
-       } else {
-         targetPage = `.${pathname}`;
-       }
-    }
-
-    const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(APP_SHELL_CACHE);
-      await cache.put(targetPage, response.clone());
-      console.log(`SW: 后台更新页面成功: ${targetPage}`);
-    }
-  } catch (error) {
-    console.warn(`SW: 后台更新页面失败: ${targetPage}`, error);
-  }
-}
-
-// data.json处理 - 网络优先，确保数据最新，但必须保证有缓存
-async function handleDataJson(request) {
-  try {
-    // 1. 尝试网络请求 (这是为了首屏速度，直接走网络)
+    // 1. 优先尝试网络请求
     const networkResponse = await fetch(request);
     
     // 2. 网络请求成功：克隆一份存入缓存，然后返回给页面
@@ -451,30 +458,38 @@ async function handleDataJson(request) {
   } catch (error) {
     console.warn('SW: 网络请求失败，尝试读取缓存:', error);
     
-    // 4. 读取缓存 (关键修改：增加 ignoreSearch: true 忽略 ?t= 时间戳)
+    // 3. 尝试从数据缓存读取
     const dataCache = await caches.open(DATA_CACHE);
     let cachedResponse = await dataCache.match(request, { ignoreSearch: true });
     
     if (cachedResponse) {
+      console.log(`SW: 从数据缓存中找到 ${request.url}`);
       return cachedResponse;
     }
 
-    // 关键修改：如果 data-cache 里没有，尝试去 app-shell-cache 里找
-    // 因为 music.json 在 install 阶段被放进了 APP_SHELL_CACHE
+    // 4. 尝试从应用壳缓存读取
     const appShellCache = await caches.open(APP_SHELL_CACHE);
     cachedResponse = await appShellCache.match(request, { ignoreSearch: true });
 
     if (cachedResponse) {
-        console.log('SW: 从 AppShell 缓存中找到备用数据');
-        return cachedResponse;
+      console.log(`SW: 从应用壳缓存中找到 ${request.url}`);
+      return cachedResponse;
     }
     
     // 5. 既没网络也没缓存
-    throw error;
+    console.error(`SW: 无法获取关键数据文件: ${request.url}`);
+    return new Response(
+      JSON.stringify({ error: '无法加载数据，请检查网络连接' }),
+      { 
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }
 
-// MP3处理 - 根据配置决定是否缓存
+// 3. MP3处理 - 缓存优先策略（受配置控制）
 async function handleMp3(request) {
   // 检查是否启用MP3缓存
   if (!cacheConfig.enableMp3Cache) {
@@ -511,7 +526,7 @@ async function handleMp3(request) {
   
   if (cachedResponse) {
     // 有缓存：立即返回，后台更新
-    updateMp3InBackground(request, dataCache);
+    updateInBackground(request, null, DATA_CACHE);
     return cachedResponse;
   }
   
@@ -557,53 +572,46 @@ async function handleMp3(request) {
   }
 }
 
-// 后台更新MP3
-async function updateMp3InBackground(request, cache) {
-  try {
-    const freshResponse = await fetch(request);
-    if (freshResponse.ok && cacheConfig.enableMp3Cache) {
-      // 检查是否超过限制
-      const allRequests = await cache.keys();
-      const mp3Requests = allRequests.filter(req => req.url.endsWith('.mp3'));
-      
-      if (mp3Requests.length < cacheConfig.maxMp3CacheCount) {
-        await cache.put(request, freshResponse.clone());
-      }
-    }
-  } catch (error) {
-    // 静默失败
-  }
-}
-
-// 静态资源处理
+// 4. 静态资源处理 - 缓存优先策略
 async function handleStaticResources(request) {
   // 优先从应用壳缓存获取
   const appShellCache = await caches.open(APP_SHELL_CACHE);
-  // 关键修改：添加 { ignoreSearch: true } 以忽略 url 中的 query 参数(如 ?t=...)
   const cachedResponse = await appShellCache.match(request, { ignoreSearch: true });
-  if (cachedResponse) return cachedResponse;
+  
+  if (cachedResponse) {
+    // 后台更新缓存
+    updateInBackground(request, null, APP_SHELL_CACHE);
+    return cachedResponse;
+  }
   
   // 尝试从数据缓存获取
   const dataCache = await caches.open(DATA_CACHE);
   const dataCachedResponse = await dataCache.match(request, { ignoreSearch: true });
-  if (dataCachedResponse) return dataCachedResponse;
+  if (dataCachedResponse) {
+    // 后台更新缓存
+    updateInBackground(request, null, DATA_CACHE);
+    return dataCachedResponse;
+  }
   
   // 最后尝试网络
   try {
     const networkResponse = await fetch(request);
     
-    // 如果是小型静态资源，缓存到应用壳
-    if (networkResponse.ok && 
-        networkResponse.headers.get('content-length') < 1024 * 1024 && // < 1MB
-        request.method === 'GET') {
-      
+    // 如果是静态资源，缓存到应用壳
+    if (networkResponse.ok && request.method === 'GET') {
       const contentType = networkResponse.headers.get('content-type') || '';
+      
+      // 缓存常见的静态资源类型
       if (contentType.includes('font') || 
           contentType.includes('image') || 
           contentType.includes('stylesheet') || 
-          contentType.includes('script')) {
+          contentType.includes('javascript')) {
         
-        await appShellCache.put(request, networkResponse.clone());
+        // 检查文件大小，小于5MB的才缓存
+        const contentLength = networkResponse.headers.get('content-length');
+        if (!contentLength || parseInt(contentLength) < 5 * 1024 * 1024) {
+          await appShellCache.put(request, networkResponse.clone());
+        }
       }
     }
     
@@ -620,7 +628,72 @@ async function handleStaticResources(request) {
       );
     }
     
+    // 返回404响应
+    return new Response(null, { 
+      status: 404, 
+      statusText: 'Not Found' 
+    });
+  }
+}
+
+// 5. 其他资源处理 - 后台更新策略
+async function handleOtherResources(request) {
+  try {
+    // 先尝试网络请求
+    const networkResponse = await fetch(request);
+    
+    // 如果是成功的响应，可以缓存到数据缓存
+    if (networkResponse.ok && request.method === 'GET') {
+      const dataCache = await caches.open(DATA_CACHE);
+      
+      // 检查缓存数量
+      const allRequests = await dataCache.keys();
+      const otherRequests = allRequests.filter(req => 
+        !req.url.endsWith('.mp3') && 
+        !REQUIRED_FILES.some(requiredFile => req.url.includes(requiredFile.split('/').pop()))
+      );
+      
+      if (otherRequests.length < cacheConfig.maxOtherCacheCount) {
+        await dataCache.put(request, networkResponse.clone());
+      }
+    }
+    
+    return networkResponse;
+    
+  } catch (error) {
+    console.warn('SW: 其他资源网络请求失败，尝试缓存:', error);
+    
+    // 尝试从数据缓存获取
+    const dataCache = await caches.open(DATA_CACHE);
+    const cachedResponse = await dataCache.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    
+    // 尝试从应用壳缓存获取
+    const appShellCache = await caches.open(APP_SHELL_CACHE);
+    const appCachedResponse = await appShellCache.match(request);
+    if (appCachedResponse) {
+      return appCachedResponse;
+    }
+    
+    // 都没有，返回网络错误
     throw error;
+  }
+}
+
+// 通用后台更新函数
+async function updateInBackground(request, cacheKey, cacheName) {
+  try {
+    const freshResponse = await fetch(request);
+    if (freshResponse.ok) {
+      const cache = await caches.open(cacheName);
+      const keyToUse = cacheKey || request;
+      await cache.put(keyToUse, freshResponse.clone());
+      console.log(`SW: 后台更新成功: ${request.url}`);
+    }
+  } catch (error) {
+    // 静默失败，不影响主流程
   }
 }
 
@@ -674,10 +747,9 @@ self.addEventListener('message', (event) => {
       cleanupCache();
     }
   } else if (event.data.type === 'register-page') {
-    // 动态注册新页面（扩展功能，方便未来添加新页面）
+    // 动态注册新页面
     const pagePath = event.data.pagePath;
     if (pagePath && !APP_SHELL.includes(pagePath)) {
-      // 可以动态添加到缓存配置中
       console.log(`SW: 注册新页面: ${pagePath}`);
       
       // 立即缓存这个页面
@@ -687,16 +759,21 @@ self.addEventListener('message', (event) => {
         );
       });
     }
+  } else if (event.data.type === 'request-cache-config') {
+    // 主页面请求配置，发送当前配置
+    event.source.postMessage({
+      type: 'cache-config-response',
+      config: cacheConfig
+    });
   }
 });
 
-// 只清理MP3缓存，保留data.json
+// 只清理MP3缓存，保留关键数据文件
 async function clearMp3CacheOnly() {
   try {
     const dataCache = await caches.open(DATA_CACHE);
     const requests = await dataCache.keys();
     
-    const requiredUrls = REQUIRED_FILES.map(path => new URL(path, self.location.origin).href);
     const mp3Deletions = requests
       .filter(request => request.url.endsWith('.mp3'))
       .map(request => dataCache.delete(request));
@@ -792,17 +869,6 @@ async function getCacheStatus() {
   }
 }
 
-// 监听主页面请求配置的消息
-self.addEventListener('message', (event) => {
-  if (event.data.type === 'request-cache-config') {
-    // 主页面请求配置，发送当前配置
-    event.source.postMessage({
-      type: 'cache-config-response',
-      config: cacheConfig
-    });
-  }
-});
-
 // 确保在Service Worker启动时加载配置
 (async function initConfig() {
   try {
@@ -818,46 +884,5 @@ self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'cleanup-cache') {
     console.log('SW: 定期清理缓存');
     cleanupCache();
-  }
-});
-
-// 确保data.json始终可用 - 额外保护
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  
-  // 如果是data.json，确保优先使用缓存
-  if (url.pathname.endsWith('data.json')) {
-    event.respondWith(
-      (async () => {
-        try {
-          // 先尝试网络
-          const networkResponse = await fetch(event.request);
-          if (networkResponse.ok) {
-            // 更新缓存
-            const cache = await caches.open(DATA_CACHE);
-            await cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          }
-        } catch (error) {
-          // 网络失败，尝试缓存
-        }
-        
-        // 尝试缓存
-        const cache = await caches.open(DATA_CACHE);
-        const cachedResponse = await cache.match(event.request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        
-        // 都没有，返回错误
-        return new Response(
-          JSON.stringify({ error: '无法加载数据' }),
-          { 
-            status: 503,
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
-      })()
-    );
   }
 });
