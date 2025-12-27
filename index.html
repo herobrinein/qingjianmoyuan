@@ -72,6 +72,10 @@
             color: var(--text-color);
             margin: 0;
             padding: 20px;
+			padding-top: calc(20px + env(safe-area-inset-top));
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            padding-left: calc(20px + env(safe-area-inset-left));
+            padding-right: calc(20px + env(safe-area-inset-right));
             display: flex;
             justify-content: center;
             align-items: center;
@@ -162,7 +166,7 @@
 		/* 提示框 (替代 alert) */
         .custom-toast {
             position: fixed;
-            top: 20px;
+            top: calc(20px + env(safe-area-inset-top));
             left: 50%;
             transform: translateX(-50%) translateY(-20px);
             background-color: var(--container-bg);
@@ -978,21 +982,20 @@
             color: #555;
         }
 		
-        .floating-controls {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            gap: 12px;
-            background-color: var(--container-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 30px;
-            padding: 8px;
-            box-shadow: 0 4px 15px var(--shadow-color);
-            z-index: 1001;
-            /* 容器只过渡背景和边框，不参与各种 transform，避免卡顿 */
-            transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
-        }
+            .floating-controls {
+                position: fixed;
+                top: calc(10px + env(safe-area-inset-top)); 
+                right: calc(10px + env(safe-area-inset-right));
+                display: flex;
+                gap: 12px;
+                background-color: var(--container-bg);
+                border: 2px solid var(--border-color);
+                border-radius: 30px;
+                padding: 8px;
+                box-shadow: 0 4px 15px var(--shadow-color);
+                z-index: 1001;
+                transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+            }
         
         .floating-controls:hover {
             box-shadow: 0 6px 20px var(--shadow-color);
@@ -1092,8 +1095,8 @@
         /* 设置面板样式 */
         #settings-panel {
             position: fixed;
-            top: 100px;
-            right: 20px;
+            top: calc(100px + env(safe-area-inset-top)); 
+            right: calc(20px + env(safe-area-inset-right));
             width: 320px;
             background-color: var(--container-bg);
             border: 1px solid var(--border-color);
@@ -2834,7 +2837,7 @@
 		/* 响应式设计 - 移动端适配 */
         @media (max-width: 768px) {
 	        .custom-toast {
-                top: 10px;
+                top: calc(10px + env(safe-area-inset-top));
                 max-width: 90%;
                 width: auto;
                 min-width: 0;
@@ -3062,7 +3065,7 @@
             
             /* 为移动端操作栏调整测试容器底部间距 */
             #test-container {
-                padding-bottom: 80px;
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
             }
 			
 			/* 确保进度条在移动端正常显示 */
@@ -3150,8 +3153,8 @@
             }
 			
 			.floating-controls {
-                top: 10px;
-                right: 10px;
+                top: calc(10px + env(safe-area-inset-top));
+                right: calc(10px + env(safe-area-inset-right));
                 gap: 8px;
                 padding: 6px;
             }
@@ -3237,9 +3240,9 @@
             }
 			
 			#settings-panel {
-                top: 10px;
-                right: 10px;
-                left: 10px;
+                top: calc(10px + env(safe-area-inset-top));
+                right: calc(10px + env(safe-area-inset-right));
+                left: calc(10px + env(safe-area-inset-left));
                 width: auto;
                 max-width: none;
                 max-height: calc(100vh - 20px);
@@ -3406,8 +3409,8 @@
             }
 			
 	        .floating-controls {
-                top: 10px;
-                right: 10px;
+                top: calc(10px + env(safe-area-inset-top));
+                right: calc(10px + env(safe-area-inset-right));
                 gap: 8px;
                 padding: 6px;
                 border-radius: 30px;
@@ -3723,7 +3726,7 @@
             }
 			
             #settings-panel {
-                top: 5px;
+                top: calc(5px + env(safe-area-inset-top));
                 right: 5px;
                 left: 5px;
                 max-height: calc(100vh - 10px);
@@ -3879,6 +3882,7 @@
             .mobile-actions {
                 gap: 4px;
                 padding: 6px 8px;
+				padding-bottom: calc(6px + env(safe-area-inset-bottom));
             }
             
             .mobile-actions .btn {
@@ -3890,7 +3894,7 @@
             
             /* 调整测试容器底部间距 */
             #test-container {
-                padding-bottom: 70px;
+                padding-bottom: calc(70px + env(safe-area-inset-bottom));
             }
 			
 			.setup-toolbar {
@@ -3899,9 +3903,9 @@
             }
             
             #settings-panel {
-                top: 2px;
-                right: 2px;
-                left: 2px;
+                top: calc(2px + env(safe-area-inset-top));
+                right: calc(2px + env(safe-area-inset-right));
+                left: calc(2px + env(safe-area-inset-left));
                 max-height: calc(100vh - 4px);
             }
             
@@ -4010,8 +4014,10 @@
             body {
                 display: flex;
                 min-height: 100vh; 
-                padding: 10px;
-                padding-bottom: 60px; 
+                padding-top: calc(10px + env(safe-area-inset-top));
+                padding-bottom: calc(60px + env(safe-area-inset-bottom));
+                padding-left: calc(10px + env(safe-area-inset-left));
+                padding-right: calc(10px + env(safe-area-inset-right));
                 box-sizing: border-box;
                 overflow-y: auto;
             }
@@ -4044,6 +4050,10 @@
                 display: flex !important;
                 height: 48px;
                 padding: 5px 15px;
+				padding-bottom: calc(5px + env(safe-area-inset-bottom));
+                /* 横屏时左右也需要避让圆角 */
+                padding-left: calc(15px + env(safe-area-inset-left));
+                padding-right: calc(15px + env(safe-area-inset-right));
                 gap: 15px;
                 justify-content: center;
             }
@@ -4065,6 +4075,9 @@
                 grid-template-columns: 1fr 1fr;
                 gap: 12px 20px;
                 padding: 15px 20px 80px 20px;
+				padding-left: calc(20px + env(safe-area-inset-left));
+                padding-right: calc(20px + env(safe-area-inset-right));
+                padding-bottom: calc(80px + env(safe-area-inset-bottom));
                 overflow-y: auto;
                 align-content: start; 
             }
@@ -4466,10 +4479,11 @@
             left: 0;
             right: 0;
             background: var(--container-bg);
-            padding: 10px 15px;
+            padding: 10px 15px; 
+            padding-bottom: calc(10px + env(safe-area-inset-bottom));
             box-shadow: 0 -2px 10px var(--shadow-color);
             z-index: 1000;
-            gap: 8px; /* 减小间距以适应四个按钮 */
+            gap: 8px;
         }
         
         .mobile-actions .btn {
