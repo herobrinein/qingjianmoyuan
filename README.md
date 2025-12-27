@@ -4,7 +4,7 @@
 >
 > 一个优雅、现代化的古诗文背诵默写与练习平台。
 
-![Version](https://img.shields.io/badge/version-1.7.0-blue)  ![License](https://img.shields.io/badge/license-MIT-green)  ![PWA](https://img.shields.io/badge/PWA-Supported-orange) ![Powered](https://img.shields.io/badge/Powered_by-AI-red)
+![Version](https://img.shields.io/badge/version-1.7.1-blue)  ![License](https://img.shields.io/badge/license-MIT-green)  ![PWA](https://img.shields.io/badge/PWA-Supported-orange) ![Powered](https://img.shields.io/badge/Powered_by-AI-red)
 
 **青简墨缘** 是一个专注于古诗文默写的渐进式 Web 应用 (PWA)。它旨在通过沉浸式的交互体验，帮助用户加深对古典文学的记忆与理解。无论是备考学生还是诗词爱好者，都能在这里找到纯粹的练字心境。
 
@@ -33,7 +33,7 @@
 本项目凝聚了多方的创意与努力：
 
 *   **创意构思**：[@胡思乱想Hero](https://space.bilibili.com/470347297)
-*   **数据来源**：本项目的核心诗词数据来源于 **[chinese-gushiwen](https://github.com/caoxingyu/chinese-gushiwen)** 开源数据集，特此感谢作者 [@caoxingyu](https://github.com/caoxingyu) 的整理与贡献。
+*   **数据来源**：本项目的核心诗词数据来源于 **[chinese-gushiwen](https://github.com/caoxingyu/chinese-gushiwen)** 开源数据集，特此感谢 [@caoxingyu](https://github.com/caoxingyu) 的整理与贡献。
 *   **核心开发**：[@DeepSeek-v3.2](https://chat.deepseek.com)，[@Gemini-3-Pro](https://aistudio.google.com)， [@Grok-4](https://grok.com)
 
 ## ✨ 核心功能
