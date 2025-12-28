@@ -5185,9 +5185,6 @@
 		    const searchBtn = document.getElementById('search-btn');
             searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 加载中';
             searchBtn.disabled = true;
-            
-            // 添加时间戳防止浏览器强缓存 data.json (可选，如果版本更新频繁)
-            // const url = 'data.json?t=' + new Date().getTime(); 
             const url = 'data.json';
 
             return fetch(url)
@@ -5825,7 +5822,7 @@
             const dateEl = document.getElementById('app-year');
 
             // 添加防缓存的时间戳
-            fetch('changelog.txt?t=' + new Date().getTime())
+            fetch('changelog.txt')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Log file not found');
@@ -7702,7 +7699,7 @@
             loadMusicDatabase: function() {
                 // ... (保持不变) ...
                 this.elements.title.textContent = "正在加载歌单...";
-                return fetch('music.json?t=' + new Date().getTime())
+                return fetch('music.json')
                     .then(response => {
                         if (!response.ok) throw new Error('无法加载音乐列表');
                         return response.json();

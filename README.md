@@ -4,7 +4,7 @@
 >
 > 一个优雅、现代化的古诗文背诵默写与练习平台。
 
-![Version](https://img.shields.io/badge/version-1.7.1-blue)  ![License](https://img.shields.io/badge/license-MIT-green)  ![PWA](https://img.shields.io/badge/PWA-Supported-orange) ![Powered](https://img.shields.io/badge/Powered_by-AI-red)
+![Version](https://img.shields.io/badge/version-1.7.3-blue)  ![License](https://img.shields.io/badge/license-MIT-green)  ![PWA](https://img.shields.io/badge/PWA-Supported-orange) ![Powered](https://img.shields.io/badge/Powered_by-AI-red)
 
 **青简墨缘** 是一个专注于古诗文默写的渐进式 Web 应用 (PWA)。它旨在通过沉浸式的交互体验，帮助用户加深对古典文学的记忆与理解。无论是备考学生还是诗词爱好者，都能在这里找到纯粹的练字心境。
 
@@ -12,7 +12,7 @@
 
 **[👉 点击立即访问 (Github Page)](https://herobrinein.github.io/qingjianmoyuan/)**
 
-**[👉 国内可以用这个](https://s4.v100.vip:60888/recite.html)**
+**[👉 国内可以用这个](https://s4.v100.vip:40444/)**
 
 ## 📸 界面预览
 

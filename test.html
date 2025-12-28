@@ -537,6 +537,10 @@
                     <button id="clear-cache-btn" class="btn btn-danger">
                         <i class="fas fa-trash-alt"></i> 清理MP3缓存
                     </button>
+                    <!-- 新增：删除所有缓存按钮 -->
+                    <button id="delete-all-cache-btn" class="btn btn-danger">
+                        <i class="fas fa-fire"></i> 删除所有缓存
+                    </button>
                     <button id="refresh-cache-btn" class="btn btn-secondary">
                         <i class="fas fa-redo"></i> 刷新缓存配置
                     </button>
@@ -739,6 +743,8 @@
             // 缓存控制按钮
             document.getElementById('get-cache-btn').addEventListener('click', getCacheStatus);
             document.getElementById('clear-cache-btn').addEventListener('click', clearMp3Cache);
+            // 新增：删除所有缓存按钮事件监听
+            document.getElementById('delete-all-cache-btn').addEventListener('click', deleteAllCaches);
             document.getElementById('refresh-cache-btn').addEventListener('click', refreshCacheConfig);
             
             // 配置控制按钮
@@ -950,6 +956,79 @@
             }, 1000);
         }
         
+        // 新增：删除所有缓存
+        function deleteAllCaches() {
+            if (!isAuthenticated) {
+                addLog('请先验证密码才能操作', 'error');
+                return;
+            }
+            
+            if (!confirm('警告：此操作将删除所有缓存，包括MP3缓存、应用核心文件和其他缓存。\n\n这会导致应用需要重新下载所有资源。确定要继续吗？')) {
+                return;
+            }
+            
+            addLog('正在删除所有缓存...', 'warning');
+            
+            // 首先尝试通过Service Worker删除
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                addLog('通过Service Worker删除所有缓存...', 'info');
+                navigator.serviceWorker.controller.postMessage('delete-all-caches');
+            }
+            
+            // 同时使用Cache API直接删除所有缓存
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    if (cacheNames.length === 0) {
+                        addLog('没有找到任何缓存', 'info');
+                        updateCacheStatus('warning', '没有找到任何缓存');
+                        updateCacheStats({
+                            files: 0,
+                            readableSize: '0 B',
+                            mp3Files: 0,
+                            mp3ReadableSize: '0 B'
+                        });
+                        cacheStatusContent.textContent = '所有缓存已删除';
+                        return;
+                    }
+                    
+                    addLog(`找到 ${cacheNames.length} 个缓存: ${cacheNames.join(', ')}`, 'info');
+                    
+                    const deletePromises = cacheNames.map(cacheName => {
+                        addLog(`正在删除缓存: ${cacheName}`, 'info');
+                        return caches.delete(cacheName);
+                    });
+                    
+                    return Promise.all(deletePromises);
+                }).then(results => {
+                    const deletedCount = results.filter(result => result).length;
+                    addLog(`已成功删除 ${deletedCount} 个缓存`, 'success');
+                    
+                    // 更新UI显示
+                    updateCacheStatus('success', '所有缓存已删除');
+                    updateCacheStats({
+                        files: 0,
+                        readableSize: '0 B',
+                        mp3Files: 0,
+                        mp3ReadableSize: '0 B'
+                    });
+                    cacheStatusContent.textContent = '所有缓存已成功删除。\n\n请注意：\n1. 应用可能需要重新下载资源\n2. Service Worker可能需要重新安装\n3. 刷新页面以查看最新状态';
+                    
+                    // 如果有Service Worker，通知它缓存已被清除
+                    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                        setTimeout(() => {
+                            getCacheStatus();
+                        }, 500);
+                    }
+                }).catch(err => {
+                    addLog(`删除缓存失败: ${err.message}`, 'error');
+                    updateCacheStatus('error', `删除缓存失败: ${err.message}`);
+                });
+            } else {
+                addLog('浏览器不支持Cache API', 'error');
+                updateCacheStatus('error', '浏览器不支持Cache API');
+            }
+        }
+        
         // 刷新缓存配置
         function refreshCacheConfig() {
             if (!isAuthenticated) {
@@ -1146,6 +1225,32 @@
                     addLog('缓存配置已更新', 'success');
                     // 更新配置显示
                     setTimeout(() => getCacheConfig(), 500);
+                    break;
+				
+				case 'request-cache-config':
+                    // 回复当前配置给Service Worker
+                    const currentConfig = {
+                      enableMp3Cache: document.getElementById('enable-mp3-cache').checked,
+                      maxMp3CacheCount: parseInt(document.getElementById('mp3-cache-limit').value)
+                    };
+                    event.source.postMessage({
+                      type: 'cache-config-from-page',
+                      config: currentConfig
+                    });
+                    addLog('已回复缓存配置给Service Worker', 'success');
+                    break;
+                    
+                case 'all-caches-deleted':
+                    addLog('Service Worker已删除所有缓存', 'success');
+                    // 更新UI显示
+                    updateCacheStatus('success', '所有缓存已删除');
+                    updateCacheStats({
+                        files: 0,
+                        readableSize: '0 B',
+                        mp3Files: 0,
+                        mp3ReadableSize: '0 B'
+                    });
+                    cacheStatusContent.textContent = '所有缓存已成功删除。\n\n请注意：\n1. 应用可能需要重新下载资源\n2. Service Worker可能需要重新安装\n3. 刷新页面以查看最新状态';
                     break;
                     
                 default:
