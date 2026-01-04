@@ -4249,6 +4249,12 @@
                 margin-top: 10px;
                 gap: 10px 20px !important; 
             }
+			
+			/* 当JS设置display: none时，强制在横屏模式下也隐藏，覆盖上面的 grid !important */
+            #music-player-container[style*="display: none"],
+            #music-player-container[style*="display:none"] {
+                display: none !important;
+            }
 
             /* 【关键修复】让包裹层在横屏布局中“隐形/消失” */
             /* 这样内部的 按钮组 和 音量组 才能分别去第一行和第二行 */
